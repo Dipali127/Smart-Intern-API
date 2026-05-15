@@ -3,7 +3,12 @@ const internshipModel = require('../models/internshipModel');
 const applicationModel = require('../models/applicationModel');
 const validation = require('../validator/validation');
 const uploadFileOnCloudinary = require('../fileUpload/cloudinary');
+const cosineSimilarity = require("compute-cosine-similarity");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const pdfParse = require('pdf-parse');
 const fs = require('fs');
+
 
 //Apply in internship:
 const applyInternship = async function (req, res) {
@@ -19,7 +24,7 @@ const applyInternship = async function (req, res) {
             return res.status(400).send({ status: false, message: "Student not found" });
         }
 
-        if (isExistStudent._id != req.decodedToken.studentID) {
+        if (isExistStudent._id.toString() !== req.decodedToken.studentID) {
             return res.status(403).send({ status: false, message: "Unauthorized to apply for the internship" });
         }
 
@@ -29,7 +34,7 @@ const applyInternship = async function (req, res) {
         if (!validation.checkData(internshipId)) {
             return res.status(400).send({ status: false, message: "internshipid is required" });
         }
-        
+
         if (!validation.checkObjectId(internshipId)) {
             return res.status(400).send({ status: false, message: "Invalid internshipId" });
         }
@@ -51,11 +56,67 @@ const applyInternship = async function (req, res) {
         }
 
         //Multer stores the uploaded resume file inside req.file
-        const resumePath = req.file.path;
-
-        if (!resumePath) {
+        if (!req.file) {
             return res.status(400).send({ status: false, message: "Resume file is required" });
         }
+
+        const resumePath = req.file.path;
+
+        //Build a mini resume analyzer using google gemini 
+        const bufferData = fs.readFileSync(resumePath);
+        const parseData = await pdfParse(bufferData);
+
+        const prompt = `Extract all technical skills from the following resume text.
+                         Return the result ONLY as a JSON array of skills.
+              Rules:
+                  - Include programming languages, frameworks, databases, tools, and technologies.
+                  - Do NOT include soft skills.
+                  - Do NOT include explanations.
+                  - Do NOT include any text outside the array.
+                  - Output format must be strictly like: ["Skill1","Skill2","Skill3"]
+             Resume Text: ${parseData.text}`;
+
+
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const result = await model.generateContent(prompt);
+        const aiText = result.response.text();
+        const aiSkills = JSON.parse(aiText);
+
+        const model1 = genAI.getGenerativeModel({ model: "gemini-embedding-001" })
+        //Get embedding for each skills of aiSkills array
+        const resumeEmbeddings = await Promise.all(
+            aiSkills.map(skill => model1.embedContent(skill))
+        );
+
+        //Get embedding for each skills of company posted intership skills
+        const skillEmbeddings = await Promise.all(
+            isExistInternship.skillsRequired.map(skill => model1.embedContent(skill))
+        )
+
+        let matchCount = 0;
+        for (let i = 0; i < skillEmbeddings.length; i++) {
+            for (let j = 0; j < resumeEmbeddings.length; j++) {
+                let similarity = cosineSimilarity(
+                    resumeEmbeddings[j].embedding.values,
+                    skillEmbeddings[i].embedding.values
+                );
+                if (similarity > 0.6) {
+                    matchCount++;
+                    break;
+                }
+            }
+        }
+
+        console.log(matchCount);
+        console.log(isExistInternship.skillsRequired.length)
+        let totalScore = (matchCount / isExistInternship.skillsRequired.length) * 100;
+        if (totalScore < 60) {
+            return res.status(400).send({
+                status: false,
+                message: `Your resume match score is ${totalScore.toFixed(2)}%. Minimum required is 60%.`
+            });
+        }
+        console.log(totalScore)
 
         //Upload the resume file to Cloudinary and get the hosted URL
         const cloudinaryResponse = await uploadFileOnCloudinary(resumePath);
@@ -109,8 +170,8 @@ const getAllAppliedStudents = async function (req, res) {
         }
 
         //If no student has applied on the company provided internship
-        const isExistinternship = await applicationModel.find({ internshipId: internshipId });
-        if (!isExistinternship) {
+        const isExistinternship = await applicationModel.find({ internshipId });
+        if (isExistinternship.length === 0) {
             return res.status(400).send({ status: false, message: "No applications found for this internship" })
         }
 

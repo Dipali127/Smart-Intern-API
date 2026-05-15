@@ -4,8 +4,8 @@ const jwt = require('jsonwebtoken')
 const validation = require('../validator/validation.js');
 
 
-// Company registration and login refer to the authorized representative of the company, such as an employer, manager  
-// or HR personnel, who posts the internship. 
+// Company registration and login refer to the authorized member of the company, such as an employer, manager  
+// or HR personnel, who can post about the active internship in their company. 
 
 //Register Company:
 const registerCompany = async function (req, res) {
@@ -106,7 +106,7 @@ const companyLogin = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid password" });
         }
 
-        //Compare hashedPassword with the student provided password
+        //Compare hashedPassword with the company provided password
         const comparePassword = await bcrypt.compare(password, isEmailExist.password);
         if (!comparePassword) {
             return res.status(400).send({ status: false, message: "Invalid password" });
@@ -116,7 +116,7 @@ const companyLogin = async function (req, res) {
         const token = jwt.sign({
             companyID: isEmailExist._id.toString(),
             user: "company"
-        }, process.env.secretKey, { expiresIn: "1h" });
+        }, process.env.SECRET_KEY, { expiresIn: "1h" });
 
         // Set the generated token in the response header
         res.set('Authorization', `Bearer ${token}`);

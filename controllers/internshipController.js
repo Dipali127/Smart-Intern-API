@@ -31,15 +31,17 @@ const generateAIDescription = async function (req, res) {
         let prompt = description;
         if (!validation.checkData(description)) {
             prompt = `Generate a short, professional, and engaging internship description (around 2-3 
-            lines) for the position of ${position}, requiring skills in ${skillsRequired.join(", ")}.`}
+            lines) for the position of ${position}, requiring skills in ${skillsRequired.join(", ")}.`
+        }
 
         //Logic to generate AI description about internship post
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent(prompt);
+        const aiText = result.response.text();
 
         return res.status(200).send({
             status: true, message: "AI Description generated successfully",
-            data: result.response.text()
+            data: aiText
         })
 
     } catch (error) {
@@ -73,7 +75,7 @@ const postInternship = async function (req, res) {
             return res.status(400).send({ status: false, message: "Provide data to post internship" });
         }
 
-        const { category, position, internshipType, skillsRequired, eligibility, duration, location, applicationDeadline,
+        const { category, position, description, internshipType, skillsRequired, eligibility, duration, location, applicationDeadline,
             numberOfOpenings, stipend, status } = data;
 
         //Validate mandatory details
@@ -85,10 +87,8 @@ const postInternship = async function (req, res) {
             return res.status(400).send({ status: false, message: "Position is required" });
         }
 
-        //if position of this company's internship already exist
-        const isExistPosition = await internshipModel.findOne({ companyId: companyId, position: position });
-        if (isExistPosition) {
-            return res.status(409).send({ status: false, message: "An internship with the same position already exists for this company" });
+        if (!validation.checkData(description)) {
+            return res.status(400).send({ status: false, message: "Description is required" })
         }
 
         if (!Array.isArray(skillsRequired) || skillsRequired.length === 0) {
@@ -168,6 +168,7 @@ const postInternship = async function (req, res) {
             companyId: isExistcompany._id,
             category,
             position,
+            description,
             internshipType,
             skillsRequired,
             eligibility,
@@ -260,13 +261,12 @@ const updateInternship = async function (req, res) {
 const getInternship = async function (req, res) {
     try {
         const filter = req.query;
-        console.log(filter);
         //Pagination:
         const page = Number(filter.page) || 1;
         const limit = Number(filter.limit) || 2;
         const skip = (page - 1) * limit;
 
-        const query = { status: "active" };
+        let query = { status: "active" };
         //If student provides query parameters
         if (filter.category) { query.category = filter.category };
         if (filter.position) { query.position = filter.position };
@@ -307,7 +307,7 @@ const getInternshipById = async function (req, res) {
 
         const isexistInternship = await internshipModel.findById(internshipId).populate('companyId');
         if (!isexistInternship) {
-            return res.status(400).send({ status: false, message: "Internship not found" });
+            return res.status(404).send({ status: false, message: "Internship not found" });
         }
 
         if (isexistInternship.status !== "active") {

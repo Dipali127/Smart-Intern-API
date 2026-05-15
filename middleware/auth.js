@@ -12,7 +12,7 @@ const authentication = async function(req, res, next){
         const newToken = token.split(' ')[1];
 
         //Verify the token
-        jwt.verify(newToken, process.env.secretKey, (error, decodedToken) => {
+        jwt.verify(newToken, process.env.SECRET_KEY, (error, decodedToken) => {
             if(error){
                 return res.status(400).send({status:false, message:"token is invalid or expired"})
             }

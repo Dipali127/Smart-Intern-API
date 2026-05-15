@@ -5,11 +5,15 @@ const internshipSchema = new mongoose.Schema({
         type: objectId,
         ref: 'Company'
     },
-    category:{   
-        type:String,
-        required:true
+    category: {
+        type: String,
+        required: true
     },
-    position: {  
+    position: {
+        type: String,
+        required: true
+    },
+    description: {
         type: String,
         required: true
     },
@@ -19,7 +23,7 @@ const internshipSchema = new mongoose.Schema({
         default: "wfo"
     },
     skillsRequired: {
-        type: [String], 
+        type: [String],
         required: true
     },
     eligibility: {
@@ -31,17 +35,17 @@ const internshipSchema = new mongoose.Schema({
         required: true
     },
     location: {
-        country:{
-            type:String,
-            required:true
+        country: {
+            type: String,
+            required: true
         },
-        state:{
-            type:String,
-            required:true
+        state: {
+            type: String,
+            required: true
         },
-        city:{
-            type:String,
-            required:true       
+        city: {
+            type: String,
+            required: true
         }
     },
     applicationDeadline: {

@@ -116,7 +116,7 @@ const studentLogin = async function (req, res) {
         const token = jwt.sign({
             studentID: isemailExist._id.toString(),
             user: "student"
-        }, process.env.secretKey, { expiresIn: "1h" })
+        }, process.env.SECRET_KEY, { expiresIn: "1h" })
 
         //send the generated token in the response header
         res.set('Authorization', `Bearer ${token}`)
@@ -128,7 +128,7 @@ const studentLogin = async function (req, res) {
 }
 
 //Edit student details:
-//Note: This method is triggered when student applies to internship (not profile editing)
+//Note: This API is triggered/invoked when student applies to internship (not profile editing)
 const editStudentdetails = async function (req, res) {
     try {
         // fetches the studentID from the route parameters
@@ -219,7 +219,7 @@ const editStudentdetails = async function (req, res) {
         return res.status(200).send({ status: true, message: "Student details updated successfully", data: updateDetails });
 
     } catch (error) {
-        return res.status(503).send({ status: false, message: error.message });
+        return res.status(500).send({ status: false, message: error.message });
     }
 }
 

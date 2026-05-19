@@ -32,7 +32,7 @@ const registerStudent = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid email" })
         }
 
-        //Check if the provided email already exist in database
+        //Check if the provided email already exists in the database
         const existingEmail = await studentModel.findOne({ email: email });
         if (existingEmail) {
             return res.status(409).send({ status: false, message: "The provided email already exists" })
@@ -51,6 +51,10 @@ const registerStudent = async function (req, res) {
 
         if (!validation.checkData(mobileNumber)) {
             return res.status(400).send({ status: false, message: "MobileNumber is required" });
+        }
+
+        if(!validation.validateInput(mobileNumber)){
+            return res.status(400).send({ status: false, message: "Invalid MobileNumber" });
         }
 
         const uniqueMobile = await studentModel.findOne({ mobileNumber: mobileNumber });
@@ -106,7 +110,7 @@ const studentLogin = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid password" });
         }
 
-        //Compare hashedPassword with the student provided password
+        //Compare hashed Password with the student provided password
         const comparePassword = await bcrypt.compare(password, isemailExist.password);
         if (!comparePassword) {
             return res.status(401).send({ status: false, message: "Incorrect password" })
@@ -118,7 +122,7 @@ const studentLogin = async function (req, res) {
             user: "student"
         }, process.env.SECRET_KEY, { expiresIn: "1h" })
 
-        //send the generated token in the response header
+        //Send the generated token in the response header
         res.set('Authorization', `Bearer ${token}`)
 
         return res.status(200).send({ status: true, message: "Student login successfully", token: token });
@@ -131,7 +135,7 @@ const studentLogin = async function (req, res) {
 //Note: This API is triggered/invoked when student applies to internship (not profile editing)
 const editStudentdetails = async function (req, res) {
     try {
-        // fetches the studentID from the route parameters
+        //Fetch the studentID from the route parameters
         const studentId = req.params.studentID;
         //Check if the provided 'studentId' is a valid ObjectId format.
         if (!validation.checkObjectId(studentId)) {
@@ -142,8 +146,9 @@ const editStudentdetails = async function (req, res) {
         if (!isExiststudent) {
             return res.status(400).send({ status: false, message: "Student not found" });
         }
-
-        if (isExiststudent._id != req.decodedToken.studentID) {
+        
+        //Check authorization
+        if (isExiststudent._id.toString() !== req.decodedToken.studentID) {
             return res.status(403).send({ status: false, message: "Unauthorized to update student details" });
         }
 
@@ -165,8 +170,6 @@ const editStudentdetails = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid date format" });
         }
 
-        const dob = parsedDOB.toDate();
-
         if (!validation.checkData(collegeName)) {
             return res.status(400).send({ status: false, message: "CollegeName is required" });
         }
@@ -175,7 +178,7 @@ const editStudentdetails = async function (req, res) {
             return res.status(400).send({ status: false, message: "YearOfPassout is required" });
         }
 
-        // Check if yearOfPassout is not a number
+        //Check if yearOfPassout is not a number
         if (!validation.validateInput(yearOfPassout)) {
             return res.status(400).send({ status: false, message: "YearOfPassout must be a number" });
         }
@@ -202,7 +205,7 @@ const editStudentdetails = async function (req, res) {
 
         //Prepare the new edit/update details 
         const additionalData = {
-            DOB: dob,
+            DOB: parsedDOB,
             collegeName,
             yearOfPassout,
             areaOfInterest,

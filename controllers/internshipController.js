@@ -26,7 +26,6 @@ const generateAIDescription = async function (req, res) {
             return res.status(400).send({ status: false, message: "SkillsRequired is required" });
         }
 
-
         //Build prompt for Gemini AI
         let prompt = description;
         if (!validation.checkData(description)) {
@@ -60,13 +59,13 @@ const postInternship = async function (req, res) {
 
         const isExistcompany = await companyModel.findById(companyId);
 
-        //if provided companyId company doesn't exist
+        //If provided companyId doesn't exist in the database
         if (!isExistcompany) {
             return res.status(404).send({ status: false, message: "Company not found" });
         }
 
         //Check authorization
-        if (isExistcompany._id != req.decodedToken.companyID) {
+        if (isExistcompany._id.toString() !== req.decodedToken.companyID) {
             return res.status(403).send({ status: false, message: "Unauthorized to post internship details" });
         }
 
@@ -92,7 +91,7 @@ const postInternship = async function (req, res) {
         }
 
         if (!Array.isArray(skillsRequired) || skillsRequired.length === 0) {
-            return res.status(400).send({ status: false, message: "SkillsRequired is required" });
+            return res.status(400).send({ status: false, message: "SkillsRequired is required and must be in array format" });
         }
 
         if (!validation.checkData(eligibility)) {
@@ -124,9 +123,9 @@ const postInternship = async function (req, res) {
         }
 
         //Parsing the lastDateofAppling using moment.js in 'YYYY-MM-DD' format.
-        const lastDateofApplying = moment(applicationDeadline, 'YYYY-MM-DD');
+        const lastDateofApplying = moment(applicationDeadline, 'YYYY-MM-DD', true);
 
-        //Checking is the parsed date isvalid
+        //Check if the parsed date is valid
         if (!lastDateofApplying.isValid()) {
             return res.status(400).send({ status: false, message: "Invalid date format" });
         }
@@ -150,20 +149,21 @@ const postInternship = async function (req, res) {
             return res.status(400).send({ status: false, message: "Stipend is required" });
         }
 
-        //Split the stipend string into minimum and maximum stipend values
-        const [minimumStipend, maximumStipend] = stipend.split('-');
-
-
-        if (isNaN(minimumStipend) || isNaN(maximumStipend)) {
-            return res.status(400).send({ status: false, message: "Invalid stipend format" })
+        if (!validation.validateSalaryFormat(stipend)) {
+            return res.status(400).send({
+                status: false,
+                message: "Invalid stipend format. Use format: 5000-10000"
+            });
         }
+
+        const [minimumStipend, maximumStipend] = stipend.split('-');
 
         //Check if status is provided and validate it only if it is sent by company
         if (status && !["active", "closed"].includes(status)) {
             return res.status(400).send({ status: false, message: "Invalid status value" });
         }
-
-        //Structure of internship show in database
+        
+        // Prepare the new internship details to save in the database
         const newInternship = {
             companyId: isExistcompany._id,
             category,
@@ -204,7 +204,7 @@ const updateInternship = async function (req, res) {
         }
 
         //Check if the logged-in company is authorized to update the internship details
-        if (isExistInternship.companyId != req.decodedToken.companyID) {
+        if (isExistInternship.companyId.toString() !== req.decodedToken.companyID) {
             return res.status(403).send({ status: false, message: "Unauthorized to update internship details" });
         }
 
@@ -243,6 +243,7 @@ const updateInternship = async function (req, res) {
                 return res.status(400).send({ status: false, message: "Invalid skillsRequired format" });
             }
 
+            //Add all multiple skills at once, but only add the ones that do not already exist in the array
             updateData.$addToSet = {
                 skillsRequired: { $each: skillsRequired }
             };
@@ -251,7 +252,7 @@ const updateInternship = async function (req, res) {
         //Update the internship
         const updatedInternship = await internshipModel.findOneAndUpdate({ _id: internshipId }, updateData, { new: true });
 
-        return res.status(200).send({ status: true, message: "Updated Succesfully", data: updatedInternship })
+        return res.status(200).send({ status: true, message: "Updated Successfully", data: updatedInternship })
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
     }
@@ -260,6 +261,12 @@ const updateInternship = async function (req, res) {
 //Get internship:
 const getInternship = async function (req, res) {
     try {
+        //Check if the logged-in user is a student
+        if (req.decodedToken.user !== "student") {
+            return res.status(403).send({ status: false, message: "Only students can access this" });
+        }
+
+        //Extract query from request parameter
         const filter = req.query;
         //Pagination:
         const page = Number(filter.page) || 1;
@@ -299,6 +306,11 @@ const getInternship = async function (req, res) {
 //Get internship by id:
 const getInternshipById = async function (req, res) {
     try {
+        //Check if the logged-in user is a student
+        if (req.decodedToken.user !== "student") {
+            return res.status(403).send({ status: false, message: "Only students can access this" });
+        }
+
         //Extracted internshipId from request parameters
         const internshipId = req.params.internshipId;
         if (!validation.checkObjectId(internshipId)) {

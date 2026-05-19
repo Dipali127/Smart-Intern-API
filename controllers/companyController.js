@@ -4,8 +4,7 @@ const jwt = require('jsonwebtoken')
 const validation = require('../validator/validation.js');
 
 
-// Company registration and login refer to the authorized member of the company, such as an employer, manager  
-// or HR personnel, who can post about the active internship in their company. 
+//Company registration and login refer to the authorized member of the company 
 
 //Register Company:
 const registerCompany = async function (req, res) {
@@ -30,7 +29,7 @@ const registerCompany = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid email" });
         }
          
-        //Check if the provided email already exist in database        
+       //Check if the provided email already exists in the database     
         const existingEmail = await companyModel.findOne({ companyEmail: companyEmail });
         if (existingEmail) {
             return res.status(409).send({ status: false, message: "The provided email already exists" });
@@ -51,7 +50,7 @@ const registerCompany = async function (req, res) {
             return res.status(400).send({ status: false, message: "Contact number is required" });
         }
        
-        //Check if the provided contact number already exist in database
+        //Check if the provided contact number already exists in the database
         const existingContact = await companyModel.findOne({contactNumber:contactNumber});
 
         if(existingContact){
@@ -118,7 +117,7 @@ const companyLogin = async function (req, res) {
             user: "company"
         }, process.env.SECRET_KEY, { expiresIn: "1h" });
 
-        // Set the generated token in the response header
+        //Set the generated token in the response header
         res.set('Authorization', `Bearer ${token}`);
 
         return res.status(200).send({ status: true, message: "Company Login Successfully", token: token });

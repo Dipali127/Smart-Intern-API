@@ -3,12 +3,12 @@ const jwt = require('jsonwebtoken');
 const authentication = async function(req, res, next){
     try{
         const token = req.header('Authorization');
-        //Check if token is provided
+        //Check if token is provided in request header
         if(!token){
             return res.status(400).send({status: false, message:"Provide token"});
         }
 
-        //Split the token to remove the "Bearer" prefix
+        //Split the token to remove the "Bearer" prefix 
         const newToken = token.split(' ')[1];
 
         //Verify the token

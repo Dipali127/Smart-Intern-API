@@ -3,11 +3,13 @@ const router = express.Router();
 const studentController = require('../controllers/studentController')
 const jwt = require('../middleware/auth')
 
-//register student
+//Route to register a new student
 router.post('/register', studentController.registerStudent)
-//login student
+
+//Route to login a student
 router.post('/login', studentController.studentLogin)
-//update student details
+
+//Route to update student details (requires authentication)
 router.put('/update/:studentID', jwt.authentication,studentController.editStudentdetails)
 
 module.exports = router;

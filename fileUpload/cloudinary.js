@@ -2,9 +2,9 @@
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 
-//Connects Cloudinary to the application using credentials from environment variables
+//Connect the application server to Cloudinary cloud storage using credentials from environment variables
 cloudinary.config({ 
-    cloud_name: process.env.Cloudinary_Cloud_Name ,
+    cloud_name: process.env.Cloudinary_Cloud_Name,
     api_key: process.env.Cloudinary_Api_Key, 
     api_secret: process.env.Cloudinary_Api_Secret 
 });
@@ -18,6 +18,7 @@ const uploadFileOnCloudinary = async function(localFilePath){
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type : "auto"  
         })
+        
         //File has been uploaded successfully
         console.log(`file uploaded successfully ${response.url}`)
        
@@ -25,7 +26,7 @@ const uploadFileOnCloudinary = async function(localFilePath){
 
     }catch(error){
         console.error(`Upload failed: ${error.message}`);
-        //Remove locally saved temporary file as the uploaded operation got failed
+      //Remove locally saved temporary file as the upload operation failed
         fs.unlinkSync(localFilePath);
         return null;
     }

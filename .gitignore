@@ -4,4 +4,5 @@ node_modules/
 # Environment variables
 .env
 
+# Temporary local file storage for uploaded resumes
 uploads/

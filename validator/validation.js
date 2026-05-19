@@ -1,10 +1,12 @@
-//validation functions:
 const mongoose = require('mongoose')
-//Checks if an object is not empty by verifying if it contains any keys
-const isEmpty = (data) => Object.keys(data).length === 0;
 
-// Checks if a value is a non-empty string
-const checkData = (data) => { return typeof data === 'string' && data.length > 0 };
+//....................................................validation functions.............................................
+
+//Checks if an object is not empty by verifying if it contains any keys
+const isEmpty = (data) => !data || Object.keys(data).length === 0;
+
+//Checks if a value is a non-empty string
+const checkData = (data) => { return typeof data === 'string' && data.trim().length > 0 };
 
 //Validates a name to ensure it contains only letters(small & capital) and space is allowed
 const checkName = (name) => /^[A-Za-z\s]+$/.test(name);
@@ -18,10 +20,10 @@ const checkPassword = (password) => {
     return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}\[\]:;<>,.?~\\-]).{8,}$/.test(password);
 };
 
-//Validate input data consists only of numbers.
+//Validates a mobile number to ensure it contains only digits
 const validateInput = (input) => /^[0-9\s]+$/.test(input);
 
-//Validate salary format includes numbers and a minus symbol for the range
+//Validates salary format to ensure it contains numbers with an optional range separated by a minus symbol
 const validateSalaryFormat = (input) => {
     return /^\d{1,}(?:-\d{1,})?$/.test(input);
 };

@@ -15,7 +15,7 @@ I integrated Google Gemini AI to automate screening and description generation. 
 ## 🚀 Live API
 
 **Base URL:**  
-`https://your-render-link.onrender.com`
+`https://smart-intern-api-7vgk.onrender.com`
 
 > ⚠️ Note: First request may take 30-60 seconds to respond as the free tier spins down after inactivity.
 
@@ -789,7 +789,7 @@ You can explore and test all the API endpoints of this Smart Intern API applicat
 ### 🧪 Postman
 1. Open Postman.
 2. Use the base URL:
-   `https://url-shortener-api-9gji.onrender.com`
+   `https://smart-intern-api-7vgk.onrender.com`
 3. Test the endpoints described above.
 
 ---
@@ -797,7 +797,7 @@ You can explore and test all the API endpoints of this Smart Intern API applicat
 ### 🚀 Live API on Render
 The application is deployed and live on Render:
 
-`https://url-shortener-api-9gji.onrender.com`
+`https://smart-intern-api-7vgk.onrender.com`
 
 > ⚠️ First request may take 30-60 seconds because of the free-tier cold start.
 

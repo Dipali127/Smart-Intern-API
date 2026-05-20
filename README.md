@@ -791,6 +791,7 @@ You can explore and test all the API endpoints of this Smart Intern API applicat
 2. Use the base URL:
    `https://smart-intern-api-7vgk.onrender.com`
 3. Test the endpoints described above.
+4. Or use the saved Postman collection directly: [Smart-Intern-API Collection](https://www.postman.com/universal-meteor-562580/workspace/my-project/collection/27340893-dcc2eb02-f8a6-4f7d-a70b-efe216b92f78?action=share&source=copy-link&creator=27340893)
 
 ---
 

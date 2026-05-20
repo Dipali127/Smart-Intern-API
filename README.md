@@ -573,8 +573,7 @@ Stores information about internship applications submitted by students.
   - **Method:** `GET`
   - **Endpoint:** `/internship/getInternship`
   - **Example:** `/internship/getInternship?limit=3&position=Backend Developer&page=1`
-  - **Description:** Returns all available internships and also supports filtering by query parameters such as category,  
-    position, internshipType and location. Authentication required.
+  - **Description:** Returns all available internships and also supports filtering by query parameters such as category, position, internshipType and location. Authentication required.
 
   - **Headers:**
 

@@ -94,6 +94,23 @@ const postInternship = async function (req, res) {
             return res.status(400).send({ status: false, message: "SkillsRequired is required and must be in array format" });
         }
 
+        const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
+
+        //Get embedding for each skills of company posted internship skills
+        const skillEmbedding = await Promise.all(
+            skillsRequired.map(async (skill) => {
+                const response = await model.embedContent(skill);
+
+                return {
+                    skill: skill,
+                    embedding: response.embedding.values
+                }
+
+            }
+
+            )
+        )
+
         if (!validation.checkData(eligibility)) {
             return res.status(400).send({ status: false, message: "Eligibility is required" });
         }
@@ -162,7 +179,7 @@ const postInternship = async function (req, res) {
         if (status && !["active", "closed"].includes(status)) {
             return res.status(400).send({ status: false, message: "Invalid status value" });
         }
-        
+
         // Prepare the new internship details to save in the database
         const newInternship = {
             companyId: isExistcompany._id,
@@ -171,6 +188,7 @@ const postInternship = async function (req, res) {
             description,
             internshipType,
             skillsRequired,
+            skillEmbedding,
             eligibility,
             duration,
             location,
@@ -182,7 +200,11 @@ const postInternship = async function (req, res) {
 
         const createInternship = await internshipModel.create(newInternship);
 
-        return res.status(201).send({ status: true, message: "Internship successfully posted", data: createInternship });
+        //Create new javascript object from mongoose document to hide skillEmbedding
+        const newInternshipResponse = createInternship.toObject()
+        delete newInternshipResponse.skillEmbedding;
+
+        return res.status(201).send({ status: true, message: "Internship successfully posted", data: newInternshipResponse });
 
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
@@ -242,17 +264,39 @@ const updateInternship = async function (req, res) {
             if (!Array.isArray(skillsRequired)) {
                 return res.status(400).send({ status: false, message: "Invalid skillsRequired format" });
             }
+             
+            const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
+
+            //Get embedding for each new skills of updated by company
+            const newSkillEmbedding  = await Promise.all(
+                skillsRequired.map(async (skill) => {
+                    const response = await model.embedContent(skill);
+
+                    return {
+                        skill: skill,
+                        embedding: response.embedding.values
+                    }
+
+                }
+
+                )
+            )
 
             //Add all multiple skills at once, but only add the ones that do not already exist in the array
             updateData.$addToSet = {
-                skillsRequired: { $each: skillsRequired }
+                skillsRequired: { $each: skillsRequired },
+                skillEmbedding: {$each: newSkillEmbedding }
             };
         }
-
+        
         //Update the internship
         const updatedInternship = await internshipModel.findOneAndUpdate({ _id: internshipId }, updateData, { new: true });
 
-        return res.status(200).send({ status: true, message: "Updated Successfully", data: updatedInternship })
+        //Create new javascript object from mongoose document to hide skillEmbedding
+        const newInternshipResponse = updatedInternship.toObject()
+        delete newInternshipResponse.skillEmbedding;
+
+        return res.status(200).send({ status: true, message: "Updated Successfully", data: newInternshipResponse })
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
     }

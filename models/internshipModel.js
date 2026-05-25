@@ -26,6 +26,14 @@ const internshipSchema = new mongoose.Schema({
         type: [String],
         required: true
     },
+    skillEmbedding:{
+        type: [
+            {
+                skill: String,
+                embedding: [Number]
+            }
+        ]
+    },
     eligibility: {
         type: String,
         required: true

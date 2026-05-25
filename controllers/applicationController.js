@@ -41,7 +41,7 @@ const applyInternship = async function (req, res) {
         const { internshipId } = req.body;
 
         if (!validation.checkData(internshipId)) {
-            return res.status(400).send({ status: false, message: "internshipid is required" });
+            return res.status(400).send({ status: false, message: "internshipId is required" });
         }
 
         if (!validation.checkObjectId(internshipId)) {
@@ -100,21 +100,21 @@ const applyInternship = async function (req, res) {
 
         //Get embedding for each skills of aiSkills array
         const resumeEmbeddings = await Promise.all(
-            aiSkills.map(skill => model1.embedContent(skill))
-        );
+            aiSkills.map(async skill => {
+                const response = await model1.embedContent(skill)
+                return response.embedding.values;
+    }))
 
         //Get embedding for each skills of company posted intership skills
-        const skillEmbeddings = await Promise.all(
-            isExistInternship.skillsRequired.map(skill => model1.embedContent(skill))
-        )
+        const skillEmbeddings = isExistInternship.skillEmbedding;
         
         //Compare resume skills with internship required skills using cosine similarity
         let matchCount = 0;
         for (let i = 0; i < skillEmbeddings.length; i++) {
             for (let j = 0; j < resumeEmbeddings.length; j++) {
                 let similarity = cosineSimilarity(
-                    resumeEmbeddings[j].embedding.values,
-                    skillEmbeddings[i].embedding.values
+                    resumeEmbeddings[j],
+                    skillEmbeddings[i].embedding
                 );
                 if (similarity > 0.6) {
                     matchCount++;
@@ -125,6 +125,7 @@ const applyInternship = async function (req, res) {
         
         //Calculate match score and reject if below 60%
         let totalScore = (matchCount / isExistInternship.skillsRequired.length) * 100;
+        
        //Delete locally stored file and then return response to student about rejecting their resume 
         if (totalScore < 60) {
             deleteLocalFile(resumePath);
@@ -170,6 +171,9 @@ const applyInternship = async function (req, res) {
     }
 
     catch (error) {
+        if(req.file?.path){
+            deleteLocalFile(req.file.path);
+        }
         return res.status(500).send({ status: false, message: error.message });
     }
 
@@ -251,6 +255,10 @@ const reviewApplicant = async function (req, res) {
         const status = req.body.status;
         if (!validation.checkData(status)) {
             return res.status(400).send({ status: false, message: "Status is required" });
+        }
+
+        if(!["accepted", "rejected"].includes(status)){
+            return res.status(400).send({status:false, message: "Status must be accepted or rejected"})
         }
 
         const isExistStudent = await studentModel.findById({ _id: isExistApplication.studentId });

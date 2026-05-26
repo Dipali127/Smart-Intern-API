@@ -24,7 +24,7 @@ I integrated Google Gemini AI to automate screening and description generation. 
 * **Student Functionality:**
 - Students can register and log in to their accounts.
 - Students can explore available active internships with filters.
-- Students can apply for internships by submitting their resume after updating their profile details.
+- Students can apply for internships by uploading their resume after completing their profile details.
 - AI-powered resume screening automatically matches resume skills with internship required skills using Google Gemini AI and cosine similarity.
    
 * **Company Functionality:** 
@@ -39,10 +39,10 @@ I integrated Google Gemini AI to automate screening and description generation. 
 
 ## 🔧 Key Technical Decisions
 
-- **Google Gemini AI for resume screening:** Used gemini-2.5-flash to extract technical skills from resumes and gemini-embedding-001 to convert skills into vector embeddings for similarity comparison.
+- **Google Gemini AI for resume screening:** Used gemini-2.5-flash to extract technical skills from resumes and gemini-embedding-001 to convert skills into vector embeddings for similarity comparison. Internship required skill embeddings are pre-generated and stored in the database when a company posts an internship, avoiding regeneration on every student application which reduces latency and improves overall application performance.
 - **Cosine similarity for skill matching:** Used cosine similarity to compare resume skill embeddings with internship required skill embeddings instead of direct string comparison, which handles different formats like "JavaScript" and "JS" correctly.
 - **Retry mechanism for Cloudinary upload:** Implemented a retry mechanism with maximum 3 attempts for Cloudinary upload to handle temporary network failures without asking the student to re-upload.
-- **Multer for file uploads:** Used Multer with disk storage to handle PDF resume uploads and validate file type before uploading to Cloudinary.
+- **Multer for file uploads:** Used Multer with disk storage to temporarily store uploaded PDF resumes before uploading them to Cloudinary.
 - **Cloudinary for resume storage:** Used Cloudinary to securely store student resumes on cloud storage and get a hosted URL for permanent access.
 - **JWT for authentication:** Used JWT to generate tokens for students and companies after login to secure protected routes.
 - **bcrypt for password hashing:** Used bcrypt to hash passwords before saving them in the database to ensure sensitive data is never stored as plain text.
@@ -50,6 +50,18 @@ I integrated Google Gemini AI to automate screening and description generation. 
 - **DRY principle:** Created a reusable `deleteLocalFile` helper function to avoid repeating the same file deletion code in multiple places.
 - **Pagination:** Implemented pagination for fetching internships to avoid returning all records at once and improve performance.
 - **pdf-parse for text extraction:** Used pdf-parse to extract plain text from student resume PDF files before sending to Gemini AI for skill extraction.
+
+## 🤖 AI Resume Screening Workflow
+
+1. Student uploads resume PDF.
+2. Multer temporarily stores the uploaded resume locally.
+3. pdfParse extracts plain text from the PDF resume.
+4. Google Gemini AI extracts technical skills from the resume text extracted by pdfParse.
+5. Internship required skills are converted into vector embeddings using `gemini-embedding-001`.
+6. Resume skills are also converted into vector embeddings.
+7. Cosine similarity compares both embeddings to calculate skill similarity.
+8. The similarity score helps companies shortlist candidates more intelligently.
+9. Resume is uploaded to Cloudinary for secure storage and permanent access.
 
 ## 🗂️ Project Structure
 
@@ -150,6 +162,7 @@ Stores information about internships posted by companies.
 | `description` | String | Yes | Internship description |
 | `internshipType` | String | No | Remote, Work From Home (WFH), or Work From Office (WFO) |
 | `skillsRequired` | [String] | Yes | Array of required skills |
+| `skillEmbedding` | Array | No | Pre-generated vector embeddings for each required skill used for AI-based resume matching
 | `eligibility` | String | Yes | Eligibility criteria |
 | `duration` | String | Yes | Internship duration |
 | `location.country` | String | Yes | Country |
@@ -191,10 +204,10 @@ Stores information about internship applications submitted by students.
 
 ```json
 {
-    "name":"Avnish",
-    "email":"aVn231A@gmail.com",
-    "password":"vA11@546",
-    "mobileNumber":"9009976853"
+    "name":"Maiden",
+    "email":"mDn231A@gmail.com",
+    "password":"mD1Y1@546",
+    "mobileNumber":"9003976852"
 }
 ```
 
@@ -205,13 +218,12 @@ Stores information about internship applications submitted by students.
     "status": true,
     "message": "Student registered successfully",
     "data": {
-        "name": "Avnish",
-        "email": "aVn231A@gmail.com",
-        "password": "$2b$10$MwEk5tvc1lNkx5CwwD68qOrMzKrXXZG0FzwMyw3LAKSADy8PfnbjK",
-        "mobileNumber": "9009976853",
-        "_id": "6a0a9f22460c11b1c77d65bd",
-        "createdAt": "2026-05-18T05:09:54.553Z",
-        "updatedAt": "2026-05-18T05:09:54.553Z",
+        "name": "Maiden",
+        "email": "mDn231A@gmail.com",
+        "mobileNumber": "9003976852",
+        "_id": "6a15c39fe1e1a362e327a287",
+        "createdAt": "2026-05-26T16:00:31.334Z",
+        "updatedAt": "2026-05-26T16:00:31.334Z",
         "__v": 0
     }
 }
@@ -223,14 +235,14 @@ Stores information about internship applications submitted by students.
 
   - **Method:** `POST`
   - **Endpoint:** `/student/login`
-  - **Description:** Authenticates a student and returns a JWT token.
+  - **Description:** Authenticates a student and returns a JWT token..
 
   - **Request Body:**
 
 ```json
 {
-    "email":"aVn231A@gmail.com",
-    "password":"vA11@546"
+    "email": "mDn231A@gmail.com",
+    "password": "mD1Y1@546"
 }
 ```
 
@@ -239,7 +251,7 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Login successful",
+    "message": "Student logged in successfully",
     "token": "jwt_token"
 }
 ```
@@ -264,14 +276,14 @@ Stores information about internship applications submitted by students.
 
 ```json
 {
-    "DOB":"2020-11-07",
-    "collegeName":"Akido College Of Engineering",
-    "yearOfPassout":2020,
+   "DOB":"2018-03-01",
+    "collegeName": "Akido College Of Engineering",
+    "yearOfPassout": "2020",
     "areaOfInterest":"Web Development",
     "address": {
         "country":"India",
-        "state":"Delhi",
-        "city":"New Delhi"
+         "state":"Delhi",
+         "city":"New Delhi"
     }
 }
 ```
@@ -283,23 +295,22 @@ Stores information about internship applications submitted by students.
     "status": true,
     "message": "Student details updated successfully",
     "data": {
-        "address": {
+            "address": {
             "country": "India",
             "state": "Delhi",
             "city": "New Delhi"
         },
-        "_id": "6a0a9f22460c11b1c77d65bd",
-        "name": "Avnish",
-        "email": "aVn231A@gmail.com",
-        "password": "$2b$10$MwEk5tvc1lNkx5CwwD68qOrMzKrXXZG0FzwMyw3LAKSADy8PfnbjK",
-        "mobileNumber": "9009976853",
-        "DOB": "2020-11-06T18:30:00.000Z",
-        "collegeName": "Akido College Of Engineering",
-        "yearOfPassout": 2020,
+        "_id": "6a15c39fe1e1a362e327a287",
+        "name": "Maiden",
+        "email": "mDn231A@gmail.com",
+        "mobileNumber": "9003976852",
+        "createdAt": "2026-05-26T16:00:31.334Z",
+        "updatedAt": "2026-05-26T16:04:33.829Z",
+        "__v": 0,
+        "DOB": "2018-02-28T18:30:00.000Z",
         "areaOfInterest": "Web Development",
-        "createdAt": "2026-05-18T05:09:54.553Z",
-        "updatedAt": "2026-05-18T05:30:37.256Z",
-        "__v": 0
+        "collegeName": "Akido College Of Engineering",
+        "yearOfPassout": 2020
     }
 }
 ```
@@ -318,10 +329,10 @@ Stores information about internship applications submitted by students.
 
 ```json
 {
-    "companyName": "Zepto",
-    "companyEmail": "Ezpt21@gmail.com",
-    "password": "Ez@@Li43",
-    "contactNumber": "7268835674"
+   "companyName": "Google",
+   "companyEmail": "Gggt2M1@gmail.com",
+   "password": "Gl@@Mi43",
+   "contactNumber": "726235614"
 }
 ```
 
@@ -330,15 +341,14 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Company Registered Successfully",
+    "message": "Company registered successfully",
     "data": {
-        "companyName": "Zepto",
-        "companyEmail": "Ezpt21@gmail.com",
-        "password": "$2b$10$aq2sS9fl06FFrSGH5Yvrbu6AJI5Kb2EueCRB4fPaNSlcPAAGRAhQa",
-        "contactNumber": "7268835674",
-        "_id": "6a0aa82cb73c6db5db00759c",
-        "createdAt": "2026-05-18T05:48:28.875Z",
-        "updatedAt": "2026-05-18T05:48:28.875Z",
+        "companyName": "Google",
+        "companyEmail": "Gggt2M1@gmail.com",
+        "contactNumber": "726235614",
+        "_id": "6a15c519e1e1a362e327a28e",
+        "createdAt": "2026-05-26T16:06:49.633Z",
+        "updatedAt": "2026-05-26T16:06:49.633Z",
         "__v": 0
     }
 }
@@ -351,13 +361,12 @@ Stores information about internship applications submitted by students.
   - **Method:** `POST`
   - **Endpoint:** `/company/login`
   - **Description:** Authenticates a company and returns a JWT token.
-
   - **Request Body:**
 
 ```json
 {
-    "companyEmail": "Ezpt21@gmail.com",
-    "password": "Ez@@Li43"
+    "companyEmail": "Gggt2M1@gmail.com",
+    "password": "Gl@@Mi43"
 }
 ```
 
@@ -366,8 +375,8 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Company Login Successfully",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb21wYW55SUQiOiI2YTBhYTgyY2I3M2M2ZGI1ZGIwMDc1OWMiLCJ1c2VyIjoiY29tcGFueSIsImlhdCI6MTc3OTA4MzM0OCwiZXhwIjoxNzc5MDg2OTQ4fQ.J9DdICfYJJGK1t69Z2dbfWJsBt_h6nRvJy6tR4vGy2E"
+    "message": "Company logged in successfully",
+    "token": "jwt_token"
 }
 ```
 
@@ -420,7 +429,7 @@ Stores information about internship applications submitted by students.
 
   - **Method:** `POST`
   - **Endpoint:** `/internship/postInternship/:companyId`
-  - **Example:** `/internship/postInternship/6a0aa82cb73c6db5db00759c`
+  - **Example:** `/internship/postInternship/6a15c519e1e1a362e327a28e`
   - **Description:** Allows a company to post a new internship. Authentication required.
 
   - **Headers:**
@@ -435,27 +444,21 @@ Stores information about internship applications submitted by students.
 
 ```json
 {
-    "category": "Software Development",
-    "position": "Backend Developer",
-    "description": "Seeking a Backend Developer Intern passionate about creating efficient backend solutions. You'll master Node.js, Express.js, MongoDB, Redis, and JavaScript while contributing to real-world projects.",
-    "internshipType": "remote",
-    "skillsRequired": [
-        "JavaScript",
-        "MongoDB",
-        "Node.js",
-        "Express.js",
-        "Redis"
-    ],
-    "eligibility": "B.Tech / B.E / MCA Students",
-    "duration": "3 months",
-    "location": {
-        "country": "India",
-        "state": "Maharashtra",
-        "city": "Mumbai"
-    },
-    "applicationDeadline": "2026-09-30",
-    "numberOfOpenings": 5,
-    "stipend": "15000-20000"
+   "category": "Software Development",
+  "position": "Backend Developer",
+   "description" : "Seeking a Backend Developer Intern eager to build scalable APIs using JavaScript, Node.js, Express.js, MongoDB, and Redis. Dive into real-world projects and make a tangible impact.",
+  "internshipType": "remote",
+  "skillsRequired" : ["javaScript", "MongoDB", "Node.JS", "express.Js", "Redis"],
+  "eligibility": "B.Tech / B.E / MCA Students",
+  "duration": "3 months",
+  "location": {
+    "country": "India",
+    "state": "Maharashtra",
+    "city": "Mumbai"
+  },
+  "applicationDeadline": "2026-09-30",
+  "numberOfOpenings": 5,
+  "stipend": "15000-20000"
 }
 ```
 
@@ -464,18 +467,18 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Internship successfully posted",
+    "message": "Internship posted successfully",
     "data": {
-        "companyId": "6a0aa82cb73c6db5db00759c",
+        "companyId": "6a15c519e1e1a362e327a28e",
         "category": "Software Development",
         "position": "Backend Developer",
-        "description": "Seeking a Backend Developer Intern passionate about creating efficient backend solutions. You'll master Node.js, Express.js, MongoDB, Redis, and JavaScript while contributing to real-world projects.",
+        "description": "Seeking a Backend Developer Intern eager to build scalable APIs using JavaScript, Node.js, Express.js, MongoDB, and Redis. Dive into real-world projects and make a tangible impact.",
         "internshipType": "remote",
         "skillsRequired": [
-            "JavaScript",
+            "javaScript",
             "MongoDB",
-            "Node.js",
-            "Express.js",
+            "Node.JS",
+            "express.Js",
             "Redis"
         ],
         "eligibility": "B.Tech / B.E / MCA Students",
@@ -489,9 +492,9 @@ Stores information about internship applications submitted by students.
         "numberOfOpenings": 5,
         "stipend": "15000-20000",
         "status": "active",
-        "_id": "6a0aacceb73c6db5db0075a2",
-        "createdAt": "2026-05-18T06:08:14.490Z",
-        "updatedAt": "2026-05-18T06:08:14.490Z",
+        "_id": "6a15c680e1e1a362e327a292",
+        "createdAt": "2026-05-26T16:12:48.749Z",
+        "updatedAt": "2026-05-26T16:12:48.749Z",
         "__v": 0
     }
 }
@@ -503,8 +506,8 @@ Stores information about internship applications submitted by students.
 
   - **Method:** `PUT`
   - **Endpoint:** `/internship/updateInternship/:internshipId`
-  - **Example:** `/internship/updateInternship/6a0aacceb73c6db5db0075a2`
-  - **Description:** Updates internship details posted by a company. Authentication required.
+  - **Example:** `/internship/updateInternship/6a15c680e1e1a362e327a292`
+  - **Description:** Updates internship details posted by a company. Authentication required. Companies can only update fields like `status`, `internshipType`, `duration`, and `skillsRequired`.
 
   - **Headers:**
 
@@ -531,27 +534,27 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Updated Successfully",
+    "message": "Updated successfully",
     "data": {
         "location": {
             "country": "India",
             "state": "Maharashtra",
             "city": "Mumbai"
         },
-        "_id": "6a0aacceb73c6db5db0075a2",
-        "companyId": "6a0aa82cb73c6db5db00759c",
+        "_id": "6a15c680e1e1a362e327a292",
+        "companyId": "6a15c519e1e1a362e327a28e",
         "category": "Software Development",
         "position": "Backend Developer",
-        "description": "Seeking a Backend Developer Intern passionate about creating efficient backend solutions. You'll master Node.js, Express.js, MongoDB, Redis, and JavaScript while contributing to real-world projects.",
+        "description": "Seeking a Backend Developer Intern eager to build scalable APIs using JavaScript, Node.js, Express.js, MongoDB, and Redis. Dive into real-world projects and make a tangible impact.",
         "internshipType": "remote",
         "skillsRequired": [
-            "JavaScript",
+            "javaScript",
             "MongoDB",
-            "Node.js",
-            "Express.js",
+            "Node.JS",
+            "express.Js",
             "Redis",
-            "Cloudinary",
-            "Data Structures And Algorithms"
+            "cloudinary",
+            "Data Structure And Algorithm"
         ],
         "eligibility": "B.Tech / B.E / MCA Students",
         "duration": "4 months",
@@ -559,8 +562,8 @@ Stores information about internship applications submitted by students.
         "numberOfOpenings": 5,
         "stipend": "15000-20000",
         "status": "active",
-        "createdAt": "2026-05-18T06:08:14.490Z",
-        "updatedAt": "2026-05-18T06:13:13.682Z",
+        "createdAt": "2026-05-26T16:12:48.749Z",
+        "updatedAt": "2026-05-26T16:15:55.961Z",
         "__v": 0
     }
 }
@@ -588,9 +591,9 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Successfully fetched internships",
+    "message": "Internship fetched successfully",
     "data": [
-        {
+         {
             "By": "Zomato",
             "category": "Software Development",
             "position": "Backend Developer",
@@ -618,8 +621,8 @@ Stores information about internship applications submitted by students.
 
   - **Method:** `GET`
   - **Endpoint:** `/internship/getInternshipById/:internshipId`
-  - **Example:** `/internship/getInternshipById/6a0aacceb73c6db5db0075a2`
-  - **Description:** Returns details of a particular internship by internship ID. Authentication required.
+  - **Example:** `/internship/getInternshipById/6a15c680e1e1a362e327a292`
+  - **Description:** Returns details of a specific internship using the internship ID. Authentication required.
 
   - **Headers:**
 
@@ -634,22 +637,22 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Successfully fetched",
+    "message": "Internship successfully fetched",
     "data": {
-        "companyName": "Zepto",
-        "companyEmail": "Ezpt21@gmail.com",
-        "companyContact": "7268835674",
+       "companyName": "Google",
+        "companyEmail": "Gggt2M1@gmail.com",
+        "companyContact": "726235614",
         "category": "Software Development",
         "position": "Backend Developer",
         "internshipType": "remote",
         "skillsRequired": [
-            "JavaScript",
+            "javaScript",
             "MongoDB",
-            "Node.js",
-            "Express.js",
+            "Node.JS",
+            "express.Js",
             "Redis",
-            "Cloudinary",
-            "Data Structures And Algorithms"
+            "cloudinary",
+            "Data Structure And Algorithm"
         ],
         "eligibility": "B.Tech / B.E / MCA Students",
         "duration": "4 months",
@@ -674,7 +677,7 @@ Stores information about internship applications submitted by students.
 
   - **Method:** `POST`
   - **Endpoint:** `/application/apply/:studentID`
-  - **Example:** `/application/apply/6a0a9f22460c11b1c77d65bd`
+  - **Example:** `/application/apply/6a15c39fe1e1a362e327a287`
   - **Description:** Allows a student to apply for an internship by uploading a resume. Authentication required.
 
   - **Headers:**
@@ -689,7 +692,7 @@ Stores information about internship applications submitted by students.
 
 | Key | Type | Value |
 |---|---|---|
-| `internshipId` | Text | `6a0aacceb73c6db5db0075a2` |
+| `internshipId` | Text | `6a15c680e1e1a362e327a292` |
 | `resume` | File | Upload PDF resume |
 
   - **Success Response (201):**
@@ -697,15 +700,15 @@ Stores information about internship applications submitted by students.
 ```json
 {
     "status": true,
-    "message": "Application Created Successfully",
+    "message": "Application created successfully",
     "data": {
-        "studentId": "6a0a9f22460c11b1c77d65bd",
-        "internshipId": "6a0aacceb73c6db5db0075a2",
-        "resume": "http://res.cloudinary.com/dseknlpcn/image/upload/v1779089218/lybkdkfvcs590eqfnnkv.pdf",
+        "studentId": "6a15c39fe1e1a362e327a287",
+        "internshipId": "6a15c680e1e1a362e327a292",
+        "resume": "http://res.cloudinary.com/dseknlpcn/image/upload/v1779812970/exharo6vw77ursnkeubz.pdf",
         "status": "pending",
-        "_id": "6a0abf423e4974acdcd438eb",
-        "createdAt": "2026-05-18T07:26:58.939Z",
-        "updatedAt": "2026-05-18T07:26:58.939Z",
+        "_id": "6a15ca6be1e1a362e327a2c0",
+        "createdAt": "2026-05-26T16:29:31.766Z",
+        "updatedAt": "2026-05-26T16:29:31.766Z",
         "__v": 0
     }
 }
@@ -717,7 +720,7 @@ Stores information about internship applications submitted by students.
 
   - **Method:** `GET`
   - **Endpoint:** `/application/getAllAppliedStudents/:internshipId`
-  - **Example:** `/application/getAllAppliedStudents/6a0aacceb73c6db5db0075a2`
+  - **Example:** `/application/getAllAppliedStudents/6a15c680e1e1a362e327a292`
   - **Description:** Returns all students who applied for a particular internship. Authentication required.
 
   - **Headers:**
@@ -735,12 +738,12 @@ Stores information about internship applications submitted by students.
     "status": true,
     "message": "Successfully fetched all students who applied for the given internship",
     "data": {
-        "internshipId": "6a0aacceb73c6db5db0075a2",
+       "internshipId": "6a15c680e1e1a362e327a292",
         "totalApplications": 1,
         "allStudentdetails": [
             {
-                "applicationId": "6a0abf423e4974acdcd438eb",
-                "resumeDownloadLink": "http://res.cloudinary.com/dseknlpcn/image/upload/v1779089218/lybkdkfvcs590eqfnnkv.pdf",
+                "applicationId": "6a15ca6be1e1a362e327a2c0",
+                "resumeDownloadLink": "http://res.cloudinary.com/dseknlpcn/image/upload/v1779812970/exharo6vw77ursnkeubz.pdf",
                 "status": "pending"
             }
         ]
@@ -754,7 +757,7 @@ Stores information about internship applications submitted by students.
 
   - **Method:** `PATCH`
   - **Endpoint:** `/application/updateStatus/:applicationId`
-  - **Example:** `/application/updateStatus/6a0abf423e4974acdcd438eb`
+  - **Example:** `/application/updateStatus/6a15ca6be1e1a362e327a2c0`
   - **Description:** Updates the status of a student's internship application and sends an email notification to the student. Authentication required.
 
   - **Headers:**
@@ -833,9 +836,13 @@ PORT=3001
 MONGO_URI=your_mongodb_connection_string
 GEMINI_API_KEY=your_gemini_api_key
 SECRET_KEY=your_secret_key
+
 Cloudinary_Cloud_Name=your_cloudinary_name
 Cloudinary_Api_Key=your_cloudinary_api_key
 Cloudinary_Api_Secret=your_cloudinary_api_secret
+
+EMAIL=your_gmail_address
+EMAIL_PASSWORD=your_google_app_password
 ```
 
 6. **Start the application:**
@@ -851,9 +858,9 @@ npm start
 - **Runtime Environment:** Node.js
 - **Backend Framework:** Express.js
 - **Database:** MongoDB Atlas
-- **Authentication:** JSON Web Token (JWT)
+- **Authentication:** JWT (jsonwebtoken)
 - **Password Hashing:** bcrypt
-- **AI Integration:** Google Gemini AI
+- **AI Integration:** Google Gemini API
 - **Cloud Storage:** Cloudinary
 - **File Upload Middleware:** multer
 - **Resume Parsing:** pdf-parse
@@ -874,6 +881,9 @@ npm start
 | `Cloudinary_Cloud_Name` | Cloudinary cloud name |
 | `Cloudinary_Api_Key` | Cloudinary API key |
 | `Cloudinary_Api_Secret` | Cloudinary API secret |
+| `EMAIL` | Your Google Gmail |
+| `EMAIL_PASSWORD` | Google App Password for Nodemailer authentication 
+
 
 
 

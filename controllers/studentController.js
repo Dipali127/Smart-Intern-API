@@ -53,7 +53,7 @@ const registerStudent = async function (req, res) {
             return res.status(400).send({ status: false, message: "MobileNumber is required" });
         }
 
-        if(!validation.validateInput(mobileNumber)){
+        if (!validation.validateInput(mobileNumber)) {
             return res.status(400).send({ status: false, message: "Invalid MobileNumber" });
         }
 
@@ -71,7 +71,13 @@ const registerStudent = async function (req, res) {
         }
 
         const createStudent = await studentModel.create(newDetails);
-        return res.status(201).send({ status: true, message: "Student registered successfully", data: createStudent });
+        //Create new javascript object from mongoose document to hide password
+
+        const newStudentResponse = createStudent.toObject();
+        delete newStudentResponse.password;
+
+        return res.status(201).send({ status: true, message: "Student registered successfully", data: newStudentResponse });
+
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
     }
@@ -125,7 +131,7 @@ const studentLogin = async function (req, res) {
         //Send the generated token in the response header
         res.set('Authorization', `Bearer ${token}`)
 
-        return res.status(200).send({ status: true, message: "Student login successfully", token: token });
+        return res.status(200).send({ status: true, message: "Student logged in successfully", token: token });
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message })
     }
@@ -144,9 +150,9 @@ const editStudentdetails = async function (req, res) {
 
         const isExiststudent = await studentModel.findById(studentId);
         if (!isExiststudent) {
-            return res.status(400).send({ status: false, message: "Student not found" });
+            return res.status(404).send({ status: false, message: "Student not found" });
         }
-        
+
         //Check authorization
         if (isExiststudent._id.toString() !== req.decodedToken.studentID) {
             return res.status(403).send({ status: false, message: "Unauthorized to update student details" });
@@ -219,7 +225,12 @@ const editStudentdetails = async function (req, res) {
         //Save the edit student record in the database
         const updateDetails = await studentModel.findOneAndUpdate({ _id: studentId },
             additionalData, { new: true });
-        return res.status(200).send({ status: true, message: "Student details updated successfully", data: updateDetails });
+
+        //Create new javascript object from mongoose document to hide student's password
+        const updatedResponse = updateDetails.toObject();
+        delete updatedResponse.password;
+
+        return res.status(200).send({ status: true, message: "Student details updated successfully", data: updatedResponse });
 
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });

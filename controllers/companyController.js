@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken')
 const validation = require('../validator/validation.js');
 
 
-//Company registration and login refer to the authorized member of the company 
+//Company registration and login are performed by an authorized member of the company 
 
 //Register Company:
 const registerCompany = async function (req, res) {
@@ -28,8 +28,8 @@ const registerCompany = async function (req, res) {
         if (!validation.checkEmail(companyEmail)) {
             return res.status(400).send({ status: false, message: "Invalid email" });
         }
-         
-       //Check if the provided email already exists in the database     
+
+        //Check if the provided email already exists in the database     
         const existingEmail = await companyModel.findOne({ companyEmail: companyEmail });
         if (existingEmail) {
             return res.status(409).send({ status: false, message: "The provided email already exists" });
@@ -43,21 +43,25 @@ const registerCompany = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid password" });
         }
 
-         //Hash the password before saving it in database
+        //Hash the password before saving it in database
         const encryptPassword = await bcrypt.hash(password, 10);
 
         if (!validation.checkData(contactNumber)) {
             return res.status(400).send({ status: false, message: "Contact number is required" });
         }
-       
-        //Check if the provided contact number already exists in the database
-        const existingContact = await companyModel.findOne({contactNumber:contactNumber});
 
-        if(existingContact){
-            return res.status(409).send({status:false,message:"Provided contact number already exists"});
+        if (!validation.validateInput(contactNumber)) {
+            return res.status(400).send({ status: false, message: "Invalid contact number" });
         }
 
-       //Prepare the new company details, including the hashed password
+        //Check if the provided contact number already exists in the database
+        const existingContact = await companyModel.findOne({ contactNumber: contactNumber });
+
+        if (existingContact) {
+            return res.status(409).send({ status: false, message: "Provided contact number already exists" });
+        }
+
+        //Prepare the new company details, including the hashed password
         const newDetails = {
             companyName: companyName,
             companyEmail: companyEmail,
@@ -66,7 +70,13 @@ const registerCompany = async function (req, res) {
         };
 
         const createCompany = await companyModel.create(newDetails);
-        return res.status(201).send({ status: true, message: "Company Registered Successfully", data: createCompany });
+
+        //Create new javascript object from mongoose document to hide password
+        const newCompanyResponse = createCompany.toObject();
+        delete newCompanyResponse.password;
+
+        return res.status(201).send({ status: true, message: "Company registered successfully", data: newCompanyResponse });
+
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
     }
@@ -81,7 +91,7 @@ const companyLogin = async function (req, res) {
         }
 
         const { companyEmail, password } = data;
-        
+
         //Validate email and password
         if (!validation.checkData(companyEmail)) {
             return res.status(400).send({ status: false, message: "Provide email for login" });
@@ -105,7 +115,7 @@ const companyLogin = async function (req, res) {
             return res.status(400).send({ status: false, message: "Invalid password" });
         }
 
-        //Compare hashedPassword with the company provided password
+        //Compare the hashed password with the company provided password
         const comparePassword = await bcrypt.compare(password, isEmailExist.password);
         if (!comparePassword) {
             return res.status(400).send({ status: false, message: "Invalid password" });
@@ -120,7 +130,7 @@ const companyLogin = async function (req, res) {
         //Set the generated token in the response header
         res.set('Authorization', `Bearer ${token}`);
 
-        return res.status(200).send({ status: true, message: "Company Login Successfully", token: token });
+        return res.status(200).send({ status: true, message: "Company logged in successfully", token: token });
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
     }

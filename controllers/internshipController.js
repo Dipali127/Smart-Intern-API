@@ -204,7 +204,7 @@ const postInternship = async function (req, res) {
         const newInternshipResponse = createInternship.toObject()
         delete newInternshipResponse.skillEmbedding;
 
-        return res.status(201).send({ status: true, message: "Internship successfully posted", data: newInternshipResponse });
+        return res.status(201).send({ status: true, message: "Internship posted successfully", data: newInternshipResponse });
 
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
@@ -264,11 +264,11 @@ const updateInternship = async function (req, res) {
             if (!Array.isArray(skillsRequired)) {
                 return res.status(400).send({ status: false, message: "Invalid skillsRequired format" });
             }
-             
+
             const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" });
 
             //Get embedding for each new skills of updated by company
-            const newSkillEmbedding  = await Promise.all(
+            const newSkillEmbedding = await Promise.all(
                 skillsRequired.map(async (skill) => {
                     const response = await model.embedContent(skill);
 
@@ -285,10 +285,10 @@ const updateInternship = async function (req, res) {
             //Add all multiple skills at once, but only add the ones that do not already exist in the array
             updateData.$addToSet = {
                 skillsRequired: { $each: skillsRequired },
-                skillEmbedding: {$each: newSkillEmbedding }
+                skillEmbedding: { $each: newSkillEmbedding }
             };
         }
-        
+
         //Update the internship
         const updatedInternship = await internshipModel.findOneAndUpdate({ _id: internshipId }, updateData, { new: true });
 
@@ -296,7 +296,7 @@ const updateInternship = async function (req, res) {
         const newInternshipResponse = updatedInternship.toObject()
         delete newInternshipResponse.skillEmbedding;
 
-        return res.status(200).send({ status: true, message: "Updated Successfully", data: newInternshipResponse })
+        return res.status(200).send({ status: true, message: "updated Successfully", data: newInternshipResponse })
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
     }
@@ -305,11 +305,6 @@ const updateInternship = async function (req, res) {
 //Get internship:
 const getInternship = async function (req, res) {
     try {
-        //Check if the logged-in user is a student
-        if (req.decodedToken.user !== "student") {
-            return res.status(403).send({ status: false, message: "Only students can access this" });
-        }
-
         //Extract query from request parameter
         const filter = req.query;
         //Pagination:
@@ -341,7 +336,7 @@ const getInternship = async function (req, res) {
             };
         });
 
-        return res.status(200).send({ status: true, message: "Successfully fetched internships", data: formattedInternships });
+        return res.status(200).send({ status: true, message: "Internship fetched successfully", data: formattedInternships });
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });
     }
@@ -350,11 +345,6 @@ const getInternship = async function (req, res) {
 //Get internship by id:
 const getInternshipById = async function (req, res) {
     try {
-        //Check if the logged-in user is a student
-        if (req.decodedToken.user !== "student") {
-            return res.status(403).send({ status: false, message: "Only students can access this" });
-        }
-
         //Extracted internshipId from request parameters
         const internshipId = req.params.internshipId;
         if (!validation.checkObjectId(internshipId)) {
@@ -387,7 +377,7 @@ const getInternshipById = async function (req, res) {
             status: isexistInternship.status
         }
 
-        return res.status(200).send({ status: true, message: "Successfully fetched", data: formattedInternships })
+        return res.status(200).send({ status: true, message: "Internship fetched successfully", data: formattedInternships })
 
     } catch (error) {
         return res.status(500).send({ status: false, message: error.message });

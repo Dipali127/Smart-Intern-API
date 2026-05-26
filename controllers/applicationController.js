@@ -125,7 +125,7 @@ const applyInternship = async function (req, res) {
         
         //Calculate match score and reject if below 60%
         let totalScore = (matchCount / isExistInternship.skillsRequired.length) * 100;
-        
+
        //Delete locally stored file and then return response to student about rejecting their resume 
         if (totalScore < 60) {
             deleteLocalFile(resumePath);
@@ -167,10 +167,11 @@ const applyInternship = async function (req, res) {
         const createInternshipApply = await applicationModel.create(newApplication);
 
         //Send the success response with the new application data
-        return res.status(201).send({ status: true, message: "Application Created Successfully", data: createInternshipApply });
+        return res.status(201).send({ status: true, message: "Application created successfully", data: createInternshipApply });
     }
 
     catch (error) {
+        //Delete locally stored file if an unexpected error occurs
         if(req.file?.path){
             deleteLocalFile(req.file.path);
         }
@@ -220,7 +221,7 @@ const getAllAppliedStudents = async function (req, res) {
 
         return res.status(200).send({
             status: true, message: "Successfully fetched all students who applied for the given internship",
-            Data: data,
+            data: data,
         })
 
     } catch (error) {
